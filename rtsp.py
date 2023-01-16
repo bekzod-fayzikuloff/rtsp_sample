@@ -87,10 +87,12 @@ class RTSPStream:
 
     @include_duration.register
     def _(self, duration: int | float) -> None:
+        """set stream need saved duration as int or float"""
         self._duration = duration
 
     @include_duration.register
     def _(self, duration: str) -> None:
+        """include_duration method get stream need saved duration as string and try parse it"""
         digit_duration = re.findall(r"\d+", duration)
         if not digit_duration or len(digit_duration) >= MAX_ACCESS_DIGIT_COUNT:
             if not digit_duration:
@@ -113,14 +115,17 @@ class RTSPStream:
         return self._duration
 
     def __iter__(self):
+        """__iter__ for get capture frame chunk in loop as generator"""
         self.capture.duration = self.duration
         yield from self.capture.update_frame_rate()
 
     def __str__(self) -> str:
+        """User friendly class instance representation"""
         return f"<{self.__class__.__name__}> [{self._rtsp_link}]"
 
 
 def stream_record(link: str):
+    """Recording stream function"""
     rtsp_stream = RTSPStream(link)
     rtsp_stream.include_duration(args.duration)
     codec = cv2.VideoWriter_fourcc("M", "J", "P", "G")
@@ -134,6 +139,7 @@ def stream_record(link: str):
 
 
 def main():
+    """Main entry point"""
     stream_record(link=args.link)
 
 
