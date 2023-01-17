@@ -17,8 +17,6 @@ class CompressWorker(QObject):
 
     def run(self) -> None:
         """Long-running task(compress file)."""
-        print(self.input_file)
-        print(self.compress_depth)
         os.system(f"ffmpeg -i {self.input_file} -vcodec libx264 -crf {self.compress_depth} {self.output_file}")
         self.finished.emit()
 
@@ -51,10 +49,12 @@ class UtilitUi(QtWidgets.QWidget):
         self.compress_button = QtWidgets.QPushButton()
         self.compress_button.setText("Compress")
         self.compress_button.clicked.connect(self._compress_video)
+        self.compress_button.setStyleSheet("border: none; background-color: silver; height: 20px")
 
         self.convert_button = QtWidgets.QPushButton()
         self.convert_button.setText("Convert")
         self.convert_button.clicked.connect(self._convert_video)
+        self.convert_button.setStyleSheet("border: none; background-color: silver; height: 20px")
 
         self.vbox_layout = QtWidgets.QVBoxLayout()
 
@@ -81,6 +81,7 @@ class CompressUi(QtWidgets.QWidget):
         """Compress window ui initialize"""
         self.setWindowTitle("Compress")
         self.setFixedSize(320, 110)
+        self.setStyleSheet("background-color: #3C3F41;")
 
         self.fileBtn = QtWidgets.QPushButton()
         self.compress_slider = QtWidgets.QSlider(Qt.Horizontal)
@@ -89,12 +90,39 @@ class CompressUi(QtWidgets.QWidget):
 
         self.output_text.setPlaceholderText("Output file name...")
         self.output_text.setText("output.mp4")
+        self.output_text.setStyleSheet("color: white;")
 
         self.fileBtn.clicked.connect(self.select_file)
         self.fileBtn.setIcon(QIcon("images/folders.png"))
         self.fileBtn.setIconSize(QSize(20, 20))
+        self.fileBtn.setStyleSheet("border: none;")
 
         self.compress_slider.setRange(1, 100)
+        self.compress_slider.setStyleSheet(
+            """
+               QSlider::groove:horizontal {
+                   border-radius: 1px;       
+                   height: 6px;              
+                   margin: -1px 0;           
+               }
+               QSlider::handle:horizontal {
+                   background-color: #98A798;
+                   border: 2px solid silver;
+                   height: 16px;     
+                   width: 10px;
+                   margin: -4px 0;     
+                   border-radius: 7px  ;
+                   padding: -4px 0px;  
+               }
+               QSlider::add-page:horizontal {
+                   background: #A6A6A6;
+               }
+               QSlider::sub-page:horizontal {
+                   background: #272A32;
+               }
+               """
+        )
+
         self.compress_slider.sliderMoved.connect(self.change_compress_depth)
         self.compress_slider.setSliderPosition(24)
         self.compress_depth.setText(f"{self.compress_slider.sliderPosition()}")
@@ -141,6 +169,7 @@ class ConvertUi(QtWidgets.QWidget):
         """Convert window ui initialize"""
         self.setWindowTitle("Convert")
         self.setFixedSize(320, 110)
+        self.setStyleSheet("background-color: #3C3F41;")
 
         self.fileBtn = QtWidgets.QPushButton()
         self.output_text = QtWidgets.QLineEdit()
@@ -149,11 +178,14 @@ class ConvertUi(QtWidgets.QWidget):
         self.fileBtn.clicked.connect(self.select_file)
         self.fileBtn.setIcon(QIcon("images/folders.png"))
         self.fileBtn.setIconSize(QSize(20, 20))
+        self.fileBtn.setStyleSheet("border: none;")
 
         self.output_text.setPlaceholderText("Output file name...")
         self.output_text.setText("output")
+        self.output_text.setStyleSheet("background-color: white;")
 
         self.ext_select.addItems(["mp4", "avi", "mkv", "mov"])
+        self.ext_select.setStyleSheet("background-color: white;")
 
         self.hbox = QtWidgets.QHBoxLayout()
         self.hbox.addWidget(self.fileBtn)
