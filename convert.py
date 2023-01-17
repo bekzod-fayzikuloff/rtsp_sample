@@ -6,20 +6,35 @@ from PyQt5.QtCore import QObject, QSize, Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon
 
 
-class Worker(QObject):
+class CompressWorker(QObject):
     finished = pyqtSignal()
 
-    def __init__(self, input_file, compress_depth, output_file):
+    def __init__(self, input_file, compress_depth, output_file) -> None:
         super().__init__()
         self.input_file = input_file
         self.compress_depth = compress_depth
         self.output_file = output_file
 
-    def run(self):
-        """Long-running task."""
+    def run(self) -> None:
+        """Long-running task(compress file)."""
         print(self.input_file)
         print(self.compress_depth)
         os.system(f"ffmpeg -i {self.input_file} -vcodec libx264 -crf {self.compress_depth} {self.output_file}")
+        self.finished.emit()
+
+
+class ConvertWorker(QObject):
+    finished = pyqtSignal()
+
+    def __init__(self, input_file, extension, output_file) -> None:
+        super().__init__()
+        self.input_file = input_file
+        self.extension = extension
+        self.output_file = output_file
+
+    def run(self) -> None:
+        """Long-running task(convert file)."""
+        os.system(f"ffmpeg -i {self.input_file} {self.output_file}.{self.extension}")
         self.finished.emit()
 
 
@@ -28,31 +43,42 @@ class UtilitUi(QtWidgets.QWidget):
         super().__init__()
         self._init_ui()
 
-    def _init_ui(self):
+    def _init_ui(self) -> None:
+        """Main window ui initialize"""
         self.setWindowTitle("Video Convert")
-        self.setMinimumSize(480, 280)
+        self.setMinimumSize(280, 80)
 
         self.compress_button = QtWidgets.QPushButton()
         self.compress_button.setText("Compress")
         self.compress_button.clicked.connect(self._compress_video)
 
-        self.hbox_layout = QtWidgets.QHBoxLayout()
+        self.convert_button = QtWidgets.QPushButton()
+        self.convert_button.setText("Convert")
+        self.convert_button.clicked.connect(self._convert_video)
 
-        self.hbox_layout.addWidget(self.compress_button)
+        self.vbox_layout = QtWidgets.QVBoxLayout()
 
-        self.setLayout(self.hbox_layout)
+        self.vbox_layout.addWidget(self.compress_button)
+        self.vbox_layout.addWidget(self.convert_button)
 
-    def _compress_video(self):
+        self.setLayout(self.vbox_layout)
+
+    def _compress_video(self) -> None:
         self.compress_ui = CompressUi()
         self.compress_ui.show()
 
+    def _convert_video(self) -> None:
+        self.convert_ui = ConvertUi()
+        self.convert_ui.show()
+
 
 class CompressUi(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._init_ui()
 
-    def _init_ui(self):
+    def _init_ui(self) -> None:
+        """Compress window ui initialize"""
         self.setWindowTitle("Compress")
         self.setFixedSize(320, 110)
 
@@ -84,11 +110,12 @@ class CompressUi(QtWidgets.QWidget):
         self.vbox.addWidget(self.output_text)
         self.setLayout(self.vbox)
 
-    def select_file(self):
+    def select_file(self) -> None:
+        """Compress file method in thread (not freeze ui)"""
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(self)
 
         self.thread = QThread()
-        self.worker = Worker(filename, self.compress_slider.sliderPosition(), self.output_text.text())
+        self.worker = CompressWorker(filename, self.compress_slider.sliderPosition(), self.output_text.text())
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
@@ -101,8 +128,57 @@ class CompressUi(QtWidgets.QWidget):
         self.fileBtn.setEnabled(False)
         self.thread.finished.connect(lambda: self.fileBtn.setEnabled(True))
 
-    def change_compress_depth(self):
+    def change_compress_depth(self) -> None:
         self.compress_depth.setText(f"{self.compress_slider.sliderPosition()}")
+
+
+class ConvertUi(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self._init_ui()
+
+    def _init_ui(self):
+        """Convert window ui initialize"""
+        self.setWindowTitle("Convert")
+        self.setFixedSize(320, 110)
+
+        self.fileBtn = QtWidgets.QPushButton()
+        self.output_text = QtWidgets.QLineEdit()
+        self.ext_select = QtWidgets.QComboBox()
+
+        self.fileBtn.clicked.connect(self.select_file)
+        self.fileBtn.setIcon(QIcon("images/folders.png"))
+        self.fileBtn.setIconSize(QSize(20, 20))
+
+        self.output_text.setPlaceholderText("Output file name...")
+        self.output_text.setText("output")
+
+        self.ext_select.addItems(["mp4", "avi", "mkv", "mov"])
+
+        self.hbox = QtWidgets.QHBoxLayout()
+        self.hbox.addWidget(self.fileBtn)
+        self.hbox.addWidget(self.output_text)
+        self.hbox.addWidget(self.ext_select)
+
+        self.setLayout(self.hbox)
+
+    def select_file(self):
+        """Convert file method in thread (not freeze ui)"""
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(self)
+
+        self.thread = QThread()
+        self.convert_worker = ConvertWorker(filename, self.ext_select.currentText(), self.output_text.text())
+        self.convert_worker.moveToThread(self.thread)
+
+        self.thread.started.connect(self.convert_worker.run)
+        self.convert_worker.finished.connect(self.thread.quit)
+        self.convert_worker.finished.connect(self.convert_worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        self.thread.start()
+
+        self.fileBtn.setEnabled(False)
+        self.thread.finished.connect(lambda: self.fileBtn.setEnabled(True))
 
 
 if __name__ == "__main__":
